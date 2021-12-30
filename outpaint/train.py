@@ -24,8 +24,8 @@ if __name__ == '__main__':
     # Define datasets & transforms
     my_tf = transforms.Compose([
             transforms.Resize(output_size),
-            #transforms.CenterCrop(output_size),
-            transforms.RandomCrop(output_size),
+            transforms.CenterCrop(output_size),
+            #transforms.RandomCrop(output_size),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor()])
     batch_size = 4

@@ -282,7 +282,7 @@ class CEImageDataset(Dataset):
             # Likely corrupt image file, so generate black instead
             img = torch.zeros((3, self.output_size, self.output_size))
             
-        masked_img, masked_part = self.apply_random_mask(img)
+        masked_img, masked_part = self.apply_center_mask(img)
 
         return img, masked_img, masked_part
 
