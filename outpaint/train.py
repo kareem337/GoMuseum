@@ -60,7 +60,7 @@ if __name__ == '__main__':
 
     # Start training
     data_loaders = {'train': train_loader, 'val': val_loader, 'test': test_loader} # NOTE: test is evidently not used by the train method
-    n_epochs = 5
+    n_epochs = 300
     adv_weight = [0.001, 0.005, 0.015, 0.040] # corresponds to epochs 1-10, 10-30, 30-60, 60-onwards
     hist_loss = train_CE(G_net, D_net, device, criterion_pxl, criterion_D, optimizer_G, optimizer_D,
                          data_loaders, model_save_path, html_save_path, n_epochs=n_epochs, outpaint=True, adv_weight=adv_weight)

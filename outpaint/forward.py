@@ -25,4 +25,7 @@ if __name__ == '__main__':
     input_img = plt.imread('input.jpeg')[:, :, :3]
     output_img, blended_img = perform_outpaint(gen_model, input_img)
     plt.imsave('output.jpeg', blended_img)
+    plt.imshow(blended_img)
+    plt.axis('off')
+    plt.show()
     #print('Destination file: ' + dst_file + ' written')
