@@ -9,9 +9,9 @@ from net.ops import Margin
 import time
 import glob
 
-os.environ['CUDA_VISIBLE_DEVICES']=str(np.argmax([int(x.split()[2]) for x in subprocess.Popen(
-        "nvidia-smi -q -d Memory | grep -A4 GPU | grep Free", shell=True, stdout=subprocess.PIPE).stdout.readlines()]
-        ))
+#os.environ['CUDA_VISIBLE_DEVICES']=str(np.argmax([int(x.split()[2]) for x in subprocess.Popen(
+ #       "nvidia-smi -q -d Memory | grep -A4 GPU | grep Free", shell=True, stdout=subprocess.PIPE).stdout.readlines()]
+ #       ))
 
 
 def generate_mask(im_shapes, mask_shapes, rand=True):
@@ -57,24 +57,24 @@ else:
     exit(1)
 
 reuse = False
-sess_config = tf.ConfigProto()
-sess_config.gpu_options.allow_growth = False
-with tf.Session(config=sess_config) as sess:
-    input_image_tf = tf.placeholder(dtype=tf.float32, shape=[1, config.img_shapes[0], config.img_shapes[1], 3])
-    mask_tf = tf.placeholder(dtype=tf.float32, shape=[1, config.img_shapes[0], config.img_shapes[1], 1])
+sess_config = tf.compat.v1.ConfigProto()
+#sess_config.gpu_options.allow_growth = False
+with tf.compat.v1.Session(config=sess_config) as sess:
+    input_image_tf = tf.compat.v1.placeholder(dtype=tf.float32, shape=[1, config.img_shapes[0], config.img_shapes[1], 3])
+    mask_tf = tf.compat.v1.placeholder(dtype=tf.float32, shape=[1, config.img_shapes[0], config.img_shapes[1], 1])
 
-    top_tf = tf.placeholder(dtype=tf.int32, shape=[])
-    left_tf = tf.placeholder(dtype=tf.int32, shape=[])
-    bottom_tf = tf.placeholder(dtype=tf.int32, shape=[])
-    right_tf = tf.placeholder(dtype=tf.int32, shape=[])
+    top_tf = tf.compat.v1.placeholder(dtype=tf.int32, shape=[])
+    left_tf = tf.compat.v1.placeholder(dtype=tf.int32, shape=[])
+    bottom_tf = tf.compat.v1.placeholder(dtype=tf.int32, shape=[])
+    right_tf = tf.compat.v1.placeholder(dtype=tf.int32, shape=[])
     margin_tf = Margin(top_tf, left_tf, bottom_tf, right_tf)
 
     output, _ = model.evaluate(input_image_tf, mask_tf, margin_tf, config=config, reuse=reuse)
 
     output = tf.cast(tf.clip_by_value((output + 1.) * 127.5, 0, 255)[:, :, :, ::-1], tf.uint8)
 
-    vars_list = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)
-    assign_ops = list(map(lambda x: tf.assign(x, tf.contrib.framework.load_variable(config.load_model_dir, x.name)),
+    vars_list = tf.compat.v1.get_collection(tf.compat.v1.GraphKeys.GLOBAL_VARIABLES)
+    assign_ops = list(map(lambda x: tf.compat.v1.assign(x, tf.train.load_variable(config.load_model_dir, x.name)),
                           vars_list))
     sess.run(assign_ops)
     print('Model loaded.')
