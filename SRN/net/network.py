@@ -12,7 +12,7 @@ from net.ops import flatten, gan_wgan_loss, gradients_penalty, random_interpolat
 from net.ops import subpixel_conv, bilinear_conv, context_normalization, max_downsampling, unfold_conv
 from net.ops import id_mrf_reg
 from util.util import f2uint
-
+tf.compat.v1.reset_default_graph()
 
 class SemanticRegenerationNet:
     def __init__(self):
@@ -24,8 +24,8 @@ class SemanticRegenerationNet:
     @add_arg_scope
     def _deconv(self, x, filters, name='deconv', reuse=False):
         h, w = x.get_shape().as_list()[1:3]
-        x = tf.image.resize_nearest_neighbor(x, [h * 2, w * 2], align_corners=True)
-        with tf.variable_scope(name, reuse=reuse):
+        x = tf.compat.v1.image.resize_nearest_neighbor(x, [h * 2, w * 2], align_corners=True)
+        with tf.compat.v1.variable_scope(name, reuse=reuse):
             x = self.conv3(inputs=x, filters=filters, strides=1, name=name+'_conv')
         return x
 
@@ -77,7 +77,7 @@ class SemanticRegenerationNet:
         x = conv3(inputs=x, filters=cnum * 2, strides=1, name='allconv14')
         x = deconv(x, filters=cnum, name='allconv15_upsample')
         x = conv3(inputs=x, filters=cnum // 2, strides=1, name='allconv16')
-        x = tf.layers.conv2d(inputs=x, kernel_size=3, filters=3, strides=1, activation=None, padding='SAME',
+        x = tf.compat.v1.layers.conv2d(inputs=x, kernel_size=3, filters=3, strides=1, activation=None, padding='SAME',
                              name='allconv17')
         x = tf.clip_by_value(x, -1, 1)
         return x
@@ -106,7 +106,7 @@ class SemanticRegenerationNet:
 
         # two stage network
         cnum = config.g_cnum
-        with tf.variable_scope(name, reuse=reuse):
+        with tf.compat.v1.variable_scope(name, reuse=reuse):
             x = self.FEN(x, cnum)
             # subpixel module, ensure the output channel the same as the input
             if config.feat_expansion_op == 'subpixel':
@@ -125,23 +125,23 @@ class SemanticRegenerationNet:
     def build_wgan_contextual_discriminator(self, x, mask, config, reuse=False):
         cnum = config.d_cnum
         dis_conv = self.d_unit
-        with tf.variable_scope('D_context', reuse=reuse):
+        with tf.compat.v1.variable_scope('D_context', reuse=reuse):
             h, w = x.get_shape().as_list()[1:3]
             x = dis_conv(x, cnum, name='dconv1')
             x = dis_conv(x, cnum*2, name='dconv2')
             x = dis_conv(x, cnum*4, name='dconv3')
-            x = tf.layers.conv2d(inputs=x, kernel_size=3, filters=1, strides=1, activation=None, padding='SAME',
+            x = tf.compat.v1.layers.conv2d(inputs=x, kernel_size=3, filters=1, strides=1, activation=None, padding='SAME',
                                  name='dconv4')
             mask = max_downsampling(mask, ratio=8)
             x = x * mask
             x = tf.reduce_sum(x, axis=[1, 2, 3]) / tf.reduce_sum(mask, axis=[1, 2, 3])
-            mask_local = tf.image.resize_nearest_neighbor(mask, [h, w], align_corners=True)
+            mask_local = tf.compat.v1.image.resize_nearest_neighbor(mask, [h, w], align_corners=True)
             return x, mask_local
 
     def build_wgan_global_discriminator(self, x, config, reuse=False):
         cnum = config.d_cnum
         dis_conv = self.d_unit
-        with tf.variable_scope('D_global', reuse=reuse):
+        with tf.compat.v1.variable_scope('D_global', reuse=reuse):
             x = dis_conv(x, cnum, name='conv1')
             x = dis_conv(x, cnum*2, name='conv2')
             x = dis_conv(x, cnum*4, name='conv3')
@@ -150,16 +150,16 @@ class SemanticRegenerationNet:
             return x
 
     def build_wgan_discriminator(self, batch_global, config, reuse=False):
-        with tf.variable_scope('discriminator', reuse=reuse):
+        with tf.compat.v1.variable_scope('discriminator', reuse=reuse):
             dglobal = self.build_wgan_global_discriminator(
                 batch_global, config=config, reuse=reuse)
-            dout_global = tf.layers.dense(dglobal, 1, name='dout_global_fc')
+            dout_global = tf.compat.v1.layers.dense(dglobal, 1, name='dout_global_fc')
             return dout_global
 
     def build_contextual_wgan_discriminator(self, batch_global, mask, config, reuse=False):
-        with tf.variable_scope('discriminator', reuse=reuse):
+        with tf.compat.v1.variable_scope('discriminator', reuse=reuse):
             dglobal = self.build_wgan_global_discriminator(batch_global, config=config, reuse=reuse)
-            dout_global = tf.layers.dense(dglobal, 1, name='dout_global_fc')
+            dout_global = tf.compat.v1.layers.dense(dglobal, 1, name='dout_global_fc')
             dout_local, mask_local = self.build_wgan_contextual_discriminator(batch_global, mask,
                                                                               config=config, reuse=reuse)
             return dout_local, dout_global, mask_local
@@ -266,10 +266,10 @@ class SemanticRegenerationNet:
             losses['g_loss'] += config.mrf_alpha * losses['id_mrf_loss']
         losses['g_loss'] += config.l1_loss_alpha * losses['l1_loss']
         losses['g_loss'] += config.ae_loss_alpha * losses['ae_loss']
-        g_vars = tf.get_collection(
-            tf.GraphKeys.TRAINABLE_VARIABLES, 'inpaint_net')
-        d_vars = tf.get_collection(
-            tf.GraphKeys.TRAINABLE_VARIABLES, 'discriminator')
+        g_vars =tf.compat.v1.get_collection(
+            tf.compat.v1.GraphKeys.TRAINABLE_VARIABLES, 'inpaint_net')
+        d_vars =tf.compat.v1.get_collection(
+            tf.compat.v1.GraphKeys.TRAINABLE_VARIABLES, 'discriminator')
         return g_vars, d_vars, losses
 
     def evaluate(self, images, masks, margin, config, reuse=False):
@@ -311,7 +311,7 @@ class HRSemanticRegenerationNet(SemanticRegenerationNet):
             use_cn = True
         # two stage network
         cnum = config.g_cnum
-        with tf.variable_scope(name, reuse=reuse):
+        with tf.compat.v1.variable_scope(name, reuse=reuse):
             x_fe = self.FEN(x, cnum)
             x = self.CPN(x_fe, xin, mask, cnum, use_cn, config.fa_alpha)
         return x, x_fe
@@ -401,9 +401,9 @@ class HRSemanticRegenerationNet(SemanticRegenerationNet):
         losses['g_loss'] += config.l1_loss_alpha * losses['l1_loss']
         losses['g_loss'] += config.ae_loss_alpha * losses['ae_loss']
         g_vars = tf.get_collection(
-            tf.GraphKeys.TRAINABLE_VARIABLES, 'inpaint_net')
+           tf.compat.v1.GraphKeys.TRAINABLE_VARIABLES, 'inpaint_net')
         d_vars = tf.get_collection(
-            tf.GraphKeys.TRAINABLE_VARIABLES, 'discriminator')
+           tf.compat.v1.GraphKeys.TRAINABLE_VARIABLES, 'discriminator')
         return g_vars, d_vars, losses
 
     def evaluate(self, images, masks, margin, config, reuse=False):

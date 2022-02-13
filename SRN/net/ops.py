@@ -69,7 +69,7 @@ def subpixel_conv(x, cnum, ksize, target_size, stride=1, rate=1, name='subpixel_
     assert th >= h and tw >= w and th % h == 0 and tw % w == 0
     assert c % (th//h*tw//w) == 0
 
-    x = tf.layers.conv2d(
+    x = tf.compat.v1.layers.conv2d(
         x, cnum, ksize, stride, dilation_rate=rate,
         activation=activation, padding=padding, name=name, reuse=reuse)
     b, h, w, c = x.get_shape().as_list()
@@ -101,16 +101,16 @@ def bilinear_conv(x, cnum, ksize, target_size, stride=1, rate=1, name='subpixel_
 
 # mask: 1 for unknown and 0 for known
 def context_normalization(x, mask, alpha=0.5, eps=1e-5):
-    mask_s = tf.image.resize_nearest_neighbor(1 - mask[:, :, :, 0:1], x.get_shape().as_list()[1:3])
-    x_known_cnt = tf.maximum(eps, tf.reduce_sum(mask_s, [1, 2], keep_dims=True))
-    x_known_mean = tf.reduce_sum(x * mask_s, [1, 2], keep_dims=True) / x_known_cnt
-    x_known_variance = tf.reduce_sum((x * mask_s - x_known_mean) ** 2, [1, 2], keep_dims=True) / x_known_cnt
+    mask_s = tf.compat.v1.image.resize_nearest_neighbor(1 - mask[:, :, :, 0:1], x.get_shape().as_list()[1:3])
+    x_known_cnt = tf.maximum(eps, tf.reduce_sum(mask_s, [1, 2], keepdims=True))
+    x_known_mean = tf.reduce_sum(x * mask_s, [1, 2], keepdims=True) / x_known_cnt
+    x_known_variance = tf.reduce_sum((x * mask_s - x_known_mean) ** 2, [1, 2], keepdims=True) / x_known_cnt
 
     mask_s_rev = 1 - mask_s
-    x_unknown_cnt = tf.maximum(eps, tf.reduce_sum(mask_s_rev, [1, 2], keep_dims=True))
-    x_unknown_mean = tf.reduce_sum(x * mask_s_rev, [1, 2], keep_dims=True) / x_unknown_cnt
+    x_unknown_cnt = tf.maximum(eps, tf.reduce_sum(mask_s_rev, [1, 2], keepdims=True))
+    x_unknown_mean = tf.reduce_sum(x * mask_s_rev, [1, 2], keepdims=True) / x_unknown_cnt
     x_unknown_variance = tf.reduce_sum((x * mask_s_rev - x_unknown_mean) ** 2, [1, 2],
-                                       keep_dims=True) / x_unknown_cnt
+                                       keepdims=True) / x_unknown_cnt
     x_unknown = alpha * tf.nn.batch_normalization(x * mask_s_rev, x_unknown_mean, x_unknown_variance, x_known_mean,
                                                   tf.sqrt(x_known_variance), eps) + (1 - alpha) * x * mask_s_rev
     x = x_unknown * mask_s_rev + x * mask_s
@@ -121,13 +121,13 @@ def max_downsampling(x, ratio=2):
     iters = math.log2(ratio)
     assert int(iters) == iters
     for _ in range(int(iters)):
-        x = tf.contrib.layers.max_pool2d(x, 2, padding='SAME')
+        x = tf.nn.max_pool2d(x, 2, padding='SAME', strides=(2,2))
     return x
 
 
 def flatten(x, name='flatten'):
-    with tf.variable_scope(name):
-        return tf.contrib.layers.flatten(x)
+    with tf.compat.v1.variable_scope(name):
+        return tf.compat.v1.layers.flatten(x)
 
 
 def resize(x, scale=2, to_shape=None, align_corners=True, dynamic=False,
@@ -139,7 +139,7 @@ def resize(x, scale=2, to_shape=None, align_corners=True, dynamic=False,
     else:
         xs = x.get_shape().as_list()
         new_xs = [int(xs[1]*scale), int(xs[2]*scale)]
-    with tf.variable_scope(name):
+    with tf.compat.v1.variable_scope(name):
         if to_shape is None:
             x = func(x, new_xs, align_corners=align_corners)
         else:
@@ -153,7 +153,7 @@ def random_interpolates(x, y, alpha=None):
     x = tf.reshape(x, [shape[0], -1])
     y = tf.reshape(y, [shape[0], -1])
     if alpha is None:
-        alpha = tf.random_uniform(shape=[shape[0], 1])
+        alpha = tf.random.uniform(shape=[shape[0], 1])
     interpolates = x + alpha*(y - x)
     return tf.reshape(interpolates, shape)
 
@@ -166,9 +166,9 @@ def random_sqaure(config):
         maxt = img_height - config.margins[0] - config.mask_shapes[0]
         maxl = img_width - config.margins[1] - config.mask_shapes[1]
 
-        t = tf.random_uniform(
+        t = tf.random.uniform(
             [], minval=config.margins[0], maxval=maxt+1, dtype=tf.int32)
-        l = tf.random_uniform(
+        l = tf.random.uniform(
             [], minval=config.margins[1], maxval=maxl+1, dtype=tf.int32)
     else:
         t = config.mask_shapes[0]//2
@@ -189,9 +189,9 @@ def random_bbox(config):
     if config.random_mask is True:
         maxt = img_height - config.margins[0] - config.mask_shapes[0]
         maxl = img_width - config.margins[1] - config.mask_shapes[1]
-        t = tf.random_uniform(
+        t = tf.random.uniform(
             [], minval=config.margins[0], maxval=maxt, dtype=tf.int32)
-        l = tf.random_uniform(
+        l = tf.random.uniform(
             [], minval=config.margins[1], maxval=maxl, dtype=tf.int32)
     else:
         t = config.mask_shapes[0]//2
@@ -209,15 +209,15 @@ def bbox2mask(bbox, config, name='mask'):
         mask[:, bbox[0]+h:bbox[0]+bbox[2]-h,
              bbox[1]+w:bbox[1]+bbox[3]-w, :] = 1.
         return mask
-    with tf.variable_scope(name), tf.device('/cpu:0'):
+    with tf.compat.v1.variable_scope(name), tf.device('/cpu:0'):
         img_shape = config.img_shapes
         height = img_shape[0]
         width = img_shape[1]
-        mask = tf.py_func(
+        mask = tf.py_function(
             npmask,
             [bbox, height, width,
              config.max_delta_shapes[0], config.max_delta_shapes[1]],
-            tf.float32, stateful=False)
+            tf.float32)
         mask.set_shape([1] + [height, width] + [1])
     return mask
 
@@ -310,7 +310,7 @@ def gan_wgan_loss(pos, neg, name='gan_wgan_loss'):
 
     - Wasserstein GAN: https://arxiv.org/abs/1701.07875
     """
-    with tf.variable_scope(name):
+    with tf.compat.v1.variable_scope(name):
         d_loss = tf.reduce_mean(neg-pos)
         g_loss = -tf.reduce_mean(neg)
     return g_loss, d_loss
@@ -409,7 +409,7 @@ class CSFlow:
 
     def calc_relative_distances(self, axis=3):
         epsilon = 1e-5
-        div = tf.reduce_min(self.raw_distances, axis=axis, keep_dims=True)
+        div = tf.reduce_min(self.raw_distances, axis=axis, keepdims=True)
         # div = tf.reduce_mean(self.raw_distances, axis=axis, keep_dims=True)
         relative_dist = self.raw_distances / (div + epsilon)
         return relative_dist
@@ -434,7 +434,7 @@ class CSFlow:
 
     @staticmethod
     def sum_normalize(cs, axis=3):
-        reduce_sum = tf.reduce_sum(cs, axis, keep_dims=True, name='sum')
+        reduce_sum = tf.reduce_sum(cs, axis, keepdims=True, name='sum')
         return tf.divide(cs, reduce_sum, name='sumNormalized')
 
     def center_by_T(self, T_features, I_features):
