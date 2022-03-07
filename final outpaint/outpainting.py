@@ -1,3 +1,5 @@
+import skimage
+import skimage.transform
 from collections import defaultdict, OrderedDict
 from html4vision import Col, imagetable
 from PIL import Image
@@ -156,3 +158,82 @@ class CEImageDataset(Dataset):
 
     def __len__(self):
         return len(self.files)
+    
+def construct_masked(input_img):
+    resized = skimage.transform.resize(input_img, (input_size, input_size), anti_aliasing=True)
+    result = np.ones((output_size, output_size))
+    result[expand_size:-expand_size, expand_size:-expand_size, :] = resized
+    return result
+
+
+def blend_result(output_img, input_img, blend_width=8):
+    '''
+    Blends an input of arbitrary resolution with its output, using the highest resolution of both.
+    Returns: final result + source mask.
+    '''
+    print('Input size:', input_img.shape)
+    print('Output size:', output_img.shape)
+    in_factor = input_size / output_size
+    if input_img.shape[1] < in_factor * output_img.shape[1]:
+        # Output dominates, adapt input
+        out_width, out_height = output_img.shape[1], output_img.shape[0]
+        in_width, in_height = int(out_width * in_factor), int(out_height * in_factor)
+        input_img = skimage.transform.resize(input_img, (in_height, in_width), anti_aliasing=True)
+    else:
+        # Input dominates, adapt output
+        in_width, in_height = input_img.shape[1], input_img.shape[0]
+        out_width, out_height = int(in_width / in_factor), int(in_height / in_factor)
+        output_img = skimage.transform.resize(output_img, (out_height, out_width), anti_aliasing=True)
+    
+    # Construct source mask
+    src_mask = np.zeros((output_size, output_size))
+    src_mask[expand_size+1:-expand_size-1, expand_size+1:-expand_size-1] = 1 # 1 extra pixel for safety
+    src_mask = distance_transform_edt(src_mask) / blend_width
+    src_mask = np.minimum(src_mask, 1)
+    src_mask = skimage.transform.resize(src_mask, (out_height, out_width), anti_aliasing=True)
+    src_mask = np.tile(src_mask[:, :, np.newaxis], (1, 1, 3))
+    
+    # Pad input
+    input_pad = np.zeros((out_height, out_width, 3))
+    #print(input_pad)
+    x1 = (out_width - in_width) // 2
+    y1 = (out_height - in_height) // 2
+    input_pad[y1:y1+in_height, x1:x1+in_width, :] = input_img
+    
+    # Merge
+    blended = input_pad * src_mask + output_img * (1 - src_mask)
+
+    print('Blended size:', blended.shape)
+
+    return blended, src_mask
+
+def get_adv_weight(adv_weight, epoch):
+    if isinstance(adv_weight, list):
+        if epoch < 10:
+            return adv_weight[0]
+        elif epoch < 30:
+            return adv_weight[1]
+        elif epoch < 60:
+            return adv_weight[2]
+        else:
+            return adv_weight[3]
+    else: # just one number
+        return adv_weight
+    
+def load_model(model_path):
+    model = CEGenerator(extra_upsample=True)
+    state_dict = torch.load(model_path, map_location=torch.device('cpu'))
+
+    # Remove 'module' if present
+    new_state_dict = OrderedDict()
+    for k, v in state_dict.items():
+        if 'module' in k:
+            name = k[7:] # remove 'module'
+        else:
+            name = k
+        new_state_dict[name] = v
+
+    model.load_state_dict(new_state_dict)
+    model.cpu()
+    model.eval()
+    return model
