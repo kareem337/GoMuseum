@@ -39,6 +39,7 @@ if __name__ == '__main__':
 
     # Define model & device
     #device = torch.device('cuda:0')
+    CEDiscriminator=0
     device = torch.device('cpu')
     G_net = CEGenerator(extra_upsample=True)
     D_net = CEDiscriminator()

@@ -29,6 +29,15 @@ from torchvision import datasets, transforms, models, utils
 from torchvision.utils import save_image
 from torch.utils.data import Dataset, DataLoader
 from tqdm import tqdm
+from keras.models import Model
+from keras.layers import Input
+from keras.layers import Dense
+from keras.layers import Conv2D
+from keras.layers import LeakyReLU
+from keras.layers import Dropout
+from keras.layers import Flatten
+from keras.optimizers import adam_v2
+from keras.utils.vis_utils import plot_model
 
 input_size = 128
 output_size = 192
@@ -91,31 +100,28 @@ class CEGenerator(nn.Module):
         return self.model(x)
 
 
-class CEDiscriminator(nn.Module):
-    def __init__(self, channels=3):
-        super(CEDiscriminator, self).__init__()
-
-        def discriminator_block(in_filters, out_filters, stride, normalize):
-            """Returns layers of each discriminator block"""
-            layers = [nn.Conv2d(in_filters, out_filters, 3, stride, 1)]
-            if normalize:
-                layers.append(nn.InstanceNorm2d(out_filters))
-            layers.append(nn.LeakyReLU(0.2, inplace=True))
-            return layers
-
-        layers = []
-        in_filters = channels
-        for out_filters, stride, normalize in [(64, 2, False), (128, 2, True), (256, 2, True), (512, 1, True)]:
-            layers.extend(discriminator_block(in_filters, out_filters, stride, normalize))
-            in_filters = out_filters
-
-        layers.append(nn.Conv2d(out_filters, 1, 3, 1, 1))
-
-        self.model = nn.Sequential(*layers)
-
-    def forward(self, img):
-        return self.model(img)
-
+def define_discriminator(in_shape=(28,28,1)):
+	# image input
+	in_image = Input(shape=in_shape)
+	# downsample
+	fe = Conv2D(128, (3,3), strides=(2,2), padding='same')(in_image)
+	fe = LeakyReLU(alpha=0.2)(fe)
+	# downsample
+	fe = Conv2D(128, (3,3), strides=(2,2), padding='same')(fe)
+	fe = LeakyReLU(alpha=0.2)(fe)
+	# downsample
+	fe = Conv2D(128, (3,3), strides=(2,2), padding='same')(fe)
+	fe = LeakyReLU(alpha=0.2)(fe)
+	# flatten feature maps
+	fe = Flatten()(fe)
+	# dropout
+	fe = Dropout(0.4)(fe)
+	# output layer
+	d_out_layer = Dense(1, activation='sigmoid')(fe)
+	# define and compile discriminator model
+	d_model = Model(in_image, d_out_layer)
+	d_model.compile(loss='binary_crossentropy', optimizer=Adam(lr=0.0002, beta_1=0.5))
+	return d_model
 
 def construct_masked(input_img):
     resized = skimage.transform.resize(input_img, (input_size, input_size), anti_aliasing=True)
