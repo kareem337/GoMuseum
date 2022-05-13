@@ -1,4 +1,4 @@
-name: go_museum_mobile_app
+name: flutter_application_1
 description: A new Flutter project.
 
 # The following line prevents the package from being accidentally published to
@@ -29,6 +29,19 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  image_picker: ^0.8.4+11
+  video_player: ^2.3.0
+  carousel_slider: ^4.1.1
+  cached_network_image: ^3.2.0
+  simple_animations: ^4.0.2
+  flutter_svg: ^1.0.3
+  responsive_builder: ^0.4.2
+  intl: ^0.17.0
+  websafe_svg: ^2.1.1
+  bubble_bottom_bar: ^2.0.0
+  flare_flutter: ^3.0.2
+  youtube_player_flutter: ^8.0.0
+  flutter_tts: ^3.3.3
 
 
   # The following adds the Cupertino Icons font to your application.
@@ -58,8 +71,17 @@ flutter:
   uses-material-design: true
 
   # To add assets to your application, add an assets section, like this:
-  # assets:
-  #   - images/a_dot_burr.jpeg
+  assets:
+      - assets/logo-removebg-preview.png
+      - assets/im1.jpg
+      - assets/im2.jpeg
+      - assets/im3.jpeg
+      - assets/im4.jpeg
+      - assets/egypt.png
+      - assets/egyptian gods.PNG
+      - assets/im44.jpg
+      - assets/im55.jpg
+      - assets/im77.jpg
   #   - images/a_dot_ham.jpeg
 
   # An image asset can refer to one or more resolution-specific "variants", see
@@ -73,11 +95,11 @@ flutter:
   # "family" key with the font family name, and a "fonts" key with a
   # list giving the asset and other descriptors for the font. For
   # example:
-  # fonts:
-  #   - family: Schyler
-  #     fonts:
-  #       - asset: fonts/Schyler-Regular.ttf
-  #       - asset: fonts/Schyler-Italic.ttf
+  fonts:
+     - family: AmazingInfographic-G4WO
+       fonts:
+         - asset: assets/AmazingInfographic-G4WO.ttf
+         
   #         style: italic
   #   - family: Trajan Pro
   #     fonts:
