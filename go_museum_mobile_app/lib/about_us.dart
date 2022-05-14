@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:go_museum_mobile_app/side_in_animation.dart';
+import 'package:go_museum_mobile_app/widgets/appbar.dart';
 
-import 'package:flutter_application_1/View_details_page/side_in_animation.dart';
 class AboutUs extends StatefulWidget {
   const AboutUs({Key? key}) : super(key: key);
 
@@ -16,8 +17,12 @@ class _AboutUsState extends State<AboutUs> {
     final size = MediaQuery.of(context).size;
 
     return Scaffold(
-      body: ListView(
-        children: [Column(
+      appBar: PreferredSize(
+        preferredSize: Size.fromHeight(50.0),
+        child: CustomAppBar('About Us'),
+      ),
+      body: Center(
+        child: Column(
           children: [
             SizedBox(
               height: 30,
@@ -28,11 +33,12 @@ class _AboutUsState extends State<AboutUs> {
                 delay: 3,
                 child: Center(
                   child: Text(
-                    "About Us",
+                    "WHO ARE WE",
                     style: TextStyle(
-                        fontSize: 25.0,
+                        fontSize: 30.0,
                         color: Colors.black87,
-                        fontFamily: "AmazingInfographic-G4WO"),
+                        fontFamily: "AmazingInfographic-G4WO",
+                        fontWeight: FontWeight.bold),
                   ),
                 ),
               ),
@@ -63,7 +69,7 @@ class _AboutUsState extends State<AboutUs> {
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(15),
                     child: Image.asset(
-                      'assets/egypt.png',
+                      'assets/logo.jpeg',
                       height: 300,
                     ),
                   ),
@@ -71,10 +77,13 @@ class _AboutUsState extends State<AboutUs> {
                 ),
               ),
             ),
-            
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Text("Hena el Bottom AppBar"),
+            )
           ],
         ),
-        ]),
+      ),
     );
   }
 }
